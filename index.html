@@ -172,13 +172,14 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--navy-mid); outli
 .paper .kop-header-img{width:100%; display:block; position:relative; z-index:1;}
 .paper .kop-footer-img{width:100%; display:block; margin-top:auto; position:relative; z-index:1;}
 .paper .letter-body{padding:18px 44px 26px; position:relative; z-index:1;}
-.paper .p-topline{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;}
+.paper .p-topline{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0;}
 .paper .p-delivery{font-weight:bold;text-decoration:underline;}
 .paper .p-meta{margin-bottom:16px;}
 .paper .p-meta div{margin-bottom:1px; display:flex;}
-.paper .p-meta .p-meta-label{font-weight:bold; width:64px; flex-shrink:0;}
+.paper .p-meta .p-meta-label{width:64px; flex-shrink:0;}
+.paper .p-meta-hal span{font-weight:bold;}
 .paper .p-to{margin-bottom:14px;}
-.paper .p-hal{margin-bottom:16px;}
+.paper .p-hal-below{margin-top:14px;}
 .paper p{margin:0 0 12px; text-align:justify;}
 .detail-table{width:auto; border-collapse:collapse; margin:6px 0 16px 20px; font-size:12.6px;}
 .detail-table td{padding:1px 8px 1px 0; border:none;}
@@ -818,12 +819,14 @@ const App = {
       </div>
       <div class="p-meta">
         <div><span class="p-meta-label">No. Ref.</span><span>: ${esc(d.nomorSurat)}</span></div>
-        <div><span class="p-meta-label">Hal</span><span>: ${esc(d.hal)}</span></div>
       </div>
       <div class="p-to">
         Kepada Yth.<br>
         <b>${esc(d.penerimaNama)}</b>${d.penerimaPerusahaan? '<br>'+esc(d.penerimaPerusahaan):''}${d.penerimaLokasi? '<br>'+esc(d.penerimaLokasi):''}<br>
         ${nl2br(d.penerimaAlamat)}
+      </div>
+      <div class="p-meta p-hal-below">
+        <div class="p-meta-hal"><span class="p-meta-label">Hal</span><span>: ${esc(d.hal)}</span></div>
       </div>
       <p>Dengan hormat,</p>
       ${d.apresiasi ? `<p>${nl2br(d.apresiasi)}</p>` : ""}
@@ -882,15 +885,16 @@ const App = {
     { const _mw = doc.getTextWidth(d.metodePengiriman); const _mx = pageW-marginR-_mw;
       doc.text(d.metodePengiriman, pageW-marginR, y, {align:"right"});
       doc.setLineWidth(0.3); doc.line(_mx, y+1, pageW-marginR, y+1); }
-    doc.setFont("times","normal"); y+=8;
+    doc.setFont("times","normal"); y+=6;
     const metaValX = marginL+20;
-    doc.text("No. Ref.", marginL, y); doc.text(": "+d.nomorSurat, metaValX, y); y+=6;
-    doc.text("Hal", marginL, y); doc.text(": "+d.hal, metaValX, y); y+=8;
+    doc.text("No. Ref.", marginL, y); doc.text(": "+d.nomorSurat, metaValX, y); y+=8;
     doc.text("Kepada Yth.", marginL, y); y+=6;
     doc.setFont("times","bold"); doc.text(d.penerimaNama, marginL, y); doc.setFont("times","normal"); y+=6;
     if(d.penerimaPerusahaan){ doc.text(d.penerimaPerusahaan, marginL, y); y+=6; }
     if(d.penerimaLokasi){ doc.text(d.penerimaLokasi, marginL, y); y+=6; }
     (d.penerimaAlamat||"").split("\n").forEach(line=>{ doc.text(line, marginL, y); y+=6; });
+    y+=6;
+    doc.setFont("times","bold"); doc.text("Hal", marginL, y); doc.text(": "+d.hal, metaValX, y); doc.setFont("times","normal"); y+=8;
     y+=4;
     doc.text("Dengan hormat,", marginL, y); y+=8;
     if(d.apresiasi && d.apresiasi.trim()){
@@ -968,6 +972,7 @@ const App = {
     ]})]});
     const noBorder = {top:{style:BorderStyle.NONE,size:0,color:"FFFFFF"},bottom:{style:BorderStyle.NONE,size:0,color:"FFFFFF"},left:{style:BorderStyle.NONE,size:0,color:"FFFFFF"},right:{style:BorderStyle.NONE,size:0,color:"FFFFFF"}};
     const cell=(text,width)=>new TableCell({borders:noBorder, width:{size:width,type:WidthType.DXA}, children:[new Paragraph({children:[new TextRun({text, font:"Times New Roman", size:24})]})]});
+    const cellBold=(text,width)=>new TableCell({borders:noBorder, width:{size:width,type:WidthType.DXA}, children:[new Paragraph({children:[new TextRun({text, bold:true, font:"Times New Roman", size:24})]})]});
     const detailRows = [["Hari", d.hari], ["Tanggal", fmtTanggalPanjang(d.tanggalPekerjaan)], ["Waktu", "Pukul "+d.waktuMulai+" s.d. "+d.waktuSelesai+" WIB"]];
     if(d.areaTerdampak) detailRows.push(["Area", d.areaTerdampak]);
     const detailTable = new Table({
@@ -983,12 +988,10 @@ const App = {
       ]})]
     });
     paras.push(toplineTable);
-    paras.push(new Paragraph({text:"", spacing:{after:100}}));
     const metaTable = new Table({
       width:{size:100,type:WidthType.PERCENT},
       rows:[
         new TableRow({children:[cell("No. Ref.",1600), cell(": "+d.nomorSurat,8400)]}),
-        new TableRow({children:[cell("Hal",1600), cell(": "+d.hal,8400)]}),
       ]
     });
     paras.push(metaTable);
@@ -998,6 +1001,14 @@ const App = {
     if(d.penerimaPerusahaan) paras.push(new Paragraph({children:[new TextRun({text:d.penerimaPerusahaan, font:"Times New Roman", size:24})]}));
     if(d.penerimaLokasi) paras.push(new Paragraph({children:[new TextRun({text:d.penerimaLokasi, font:"Times New Roman", size:24})]}));
     (d.penerimaAlamat||"").split("\n").forEach(line=> paras.push(new Paragraph({children:[new TextRun({text:line, font:"Times New Roman", size:24})]})));
+    paras.push(new Paragraph({text:"", spacing:{after:100}}));
+    const halTable = new Table({
+      width:{size:100,type:WidthType.PERCENT},
+      rows:[
+        new TableRow({children:[cellBold("Hal",1600), cellBold(": "+d.hal,8400)]}),
+      ]
+    });
+    paras.push(halTable);
     paras.push(new Paragraph({text:"", spacing:{after:100}}));
     paras.push(new Paragraph({children:[new TextRun({text:"Dengan hormat,", font:"Times New Roman", size:24})], spacing:{after:200}}));
     if(d.apresiasi && d.apresiasi.trim()){
@@ -1072,15 +1083,16 @@ const App = {
 \\qc ${headerImg}\\par
 \\pard\\par
 ${esc(d.kota)}, ${esc(fmtTanggalPanjang(d.tanggalSurat))}\\tab\\tab\\tab\\b\\ul ${esc(d.metodePengiriman)}\\b0\\ulnone\\par
-\\par
 \\pard\\tx1200
 No. Ref.\\tab: ${esc(d.nomorSurat)}\\par
-Hal\\tab: ${esc(d.hal)}\\par
 \\pard\\par
 Kepada Yth.\\par
 {\\b ${esc(d.penerimaNama)}}\\par
 ${d.penerimaPerusahaan? esc(d.penerimaPerusahaan)+"\\par\n" : ""}${d.penerimaLokasi? esc(d.penerimaLokasi)+"\\par\n" : ""}${esc(d.penerimaAlamat)}\\par
 \\par
+\\pard\\tx1200
+{\\b Hal\\tab: ${esc(d.hal)}}\\par
+\\pard\\par
 Dengan hormat,\\par
 \\par
 \\qj ${d.apresiasi && d.apresiasi.trim() ? esc(d.apresiasi.trim())+"\\par\\par\n" : ""}${esc(d.kalimatPembuka)}\\par
