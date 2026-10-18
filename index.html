@@ -2100,5 +2100,18 @@ ${esc(d.ttdJabatan)}\\par
 
 window.addEventListener("DOMContentLoaded", ()=>App.init());
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  const SUPABASE_URL = 'https://mqvujsewgkjmwplgzkzn.supabase.co';
+
+  const SUPABASE_PUBLISHABLE_KEY =
+    'sb_publishable_bisYpNYESqYWYaUZpQqsgQ_oRA9u00-';
+
+  const supabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_PUBLISHABLE_KEY
+  );
+</script>
 </body>
 </html>
