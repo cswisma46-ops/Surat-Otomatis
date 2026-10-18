@@ -457,7 +457,7 @@ const App = {
       console.error("Local storage load error", e);
       this.state = emptyState();
     }
-    if(!this.state.templates || !this.state.templates.length) this.state.templates = defaultTemplates();
+    if(!Array.isArray(this.state.templates)) this.state.templates = defaultTemplates();
     if(!this.state.tenants) this.state.tenants = defaultTenants();
     if(!this.state.settings) this.state.settings = defaultSettings();
     if(typeof this.state.counter !== "number") this.state.counter = 747;
@@ -552,11 +552,17 @@ const App = {
   },
 
   generateSentence(d){
+    const desc = (d.deskripsiPekerjaan || "").trim();
+    // If the template's main paragraph already contains the complete sentence,
+    // do not wrap it in the standard sentence again (prevents repeated wording).
+    if(desc && (/^sehubungan\s+dengan\s+adanya\b/i.test(desc) || /bersama\s+ini\s+kami\s+informasikan/i.test(desc))){
+      return desc;
+    }
     const durasiTeks = d.durasiAngka+" ("+terbilang(d.durasiAngka)+") "+d.durasiSatuan;
     const areaTeks = d.areaTerdampak ? " di "+d.areaTerdampak : "";
-    const desc = d.deskripsiPekerjaan || "pekerjaan yang akan dilaksanakan";
+    const deskripsi = desc || "pekerjaan yang akan dilaksanakan";
     const dampak = d.dampak || "gangguan sementara pada operasional gedung";
-    return "Sehubungan dengan adanya "+desc+areaTeks+", bersama ini kami informasikan bahwa akan terjadi "+dampak+" selama kurang lebih "+durasiTeks+", yang akan dilaksanakan dengan rincian sebagai berikut:";
+    return "Sehubungan dengan adanya "+deskripsi+areaTeks+", bersama ini kami informasikan bahwa akan terjadi "+dampak+" selama kurang lebih "+durasiTeks+", yang akan dilaksanakan dengan rincian sebagai berikut:";
   },
 
   applyTenantMode(mode){
@@ -2071,7 +2077,7 @@ ${esc(d.ttdJabatan)}\\par
         async ()=>{
           this.state = {
             letters: incoming.letters || [],
-            templates: (incoming.templates && incoming.templates.length) ? incoming.templates : defaultTemplates(),
+            templates: Array.isArray(incoming.templates) ? incoming.templates : defaultTemplates(),
             tenants: incoming.tenants || [],
             counter: typeof incoming.counter==="number" ? incoming.counter : 747,
             settings: incoming.settings || defaultSettings(),
