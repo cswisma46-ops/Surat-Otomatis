@@ -421,22 +421,65 @@ const WP_TERMS = [
 // Temporary storage for this browser/device only. Replace with a shared backend later.
 const LOCAL_APP_DATA_KEY = "wisma46_surat_app_data_v1";
 
+
+const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbwDMurV1CnRpl_-R7lt312kgfsAFQteJ_-bLYMPYywqv5oaHiZS0UD-7KoCxgIJg7pv/exec";
+
 async function localGet(){
   try {
-    const raw = localStorage.getItem(LOCAL_APP_DATA_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const response = await fetch(
+      GOOGLE_SHEETS_API + "?action=get"
+    );
+
+    if (!response.ok) {
+      throw new Error("Gagal mengambil data dari Google Sheets.");
+    }
+
+    const result = await response.json();
+
+    if (result.status === "ok" && result.state) {
+      return result.state;
+    }
+
+    if (result.status === "empty") {
+      return null;
+    }
+
+    throw new Error(
+      result.pesan || "Data Google Sheets tidak dapat dibaca."
+    );
   } catch(e) {
-    console.error("Local storage read error", e);
-    return null;
+    console.error("Google Sheets load error", e);
+    throw e;
   }
 }
 
 async function localSet(data){
   try {
-    localStorage.setItem(LOCAL_APP_DATA_KEY, JSON.stringify(data));
+    const response = await fetch(GOOGLE_SHEETS_API, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "save",
+        state: data
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error("Gagal mengirim data ke Google Sheets.");
+    }
+
+    const result = await response.json();
+
+    if (result.status !== "ok") {
+      throw new Error(
+        result.pesan || "Data gagal disimpan."
+      );
+    }
   } catch(e) {
-    console.error("Local storage save error", e);
-    throw new Error("Penyimpanan browser penuh atau tidak tersedia. Data belum tersimpan.");
+    console.error("Google Sheets save error", e);
+    throw new Error(
+      "Data gagal disimpan ke Google Sheets. " +
+      "Periksa koneksi dan deployment Apps Script."
+    );
   }
 }
 
@@ -450,23 +493,51 @@ const App = {
   editingLetterId:null,
 
   async init(){
-    try{
-      const data = await localGet();
-      this.state = data && Object.keys(data).length ? data : emptyState();
-    }catch(e){
-      console.error("Local storage load error", e);
+  try {
+    const data = await localGet();
+
+    if (!data) {
       this.state = emptyState();
+    } else {
+      this.state = data;
     }
-    if(!Array.isArray(this.state.templates)) this.state.templates = defaultTemplates();
-    if(!this.state.tenants) this.state.tenants = defaultTenants();
-    if(!this.state.settings) this.state.settings = defaultSettings();
-    if(typeof this.state.counter !== "number") this.state.counter = 747;
-    if(!this.state.workPermits) this.state.workPermits = [];
-    if(typeof this.state.wpCounter !== "number") this.state.wpCounter = 0;
+
+    if (!Array.isArray(this.state.letters)) {
+      this.state.letters = [];
+    }
+    if (!Array.isArray(this.state.templates)) {
+      this.state.templates = defaultTemplates();
+    }
+    if (!Array.isArray(this.state.tenants)) {
+      this.state.tenants = defaultTenants();
+    }
+    if (!this.state.settings) {
+      this.state.settings = defaultSettings();
+    }
+    if (typeof this.state.counter !== "number") {
+      this.state.counter = 747;
+    }
+    if (!Array.isArray(this.state.workPermits)) {
+      this.state.workPermits = [];
+    }
+    if (typeof this.state.wpCounter !== "number") {
+      this.state.wpCounter = 0;
+    }
+
     this.loaded = true;
-    await this.persist();
     this.render();
-  },
+
+  } catch(e) {
+    console.error("Google Sheets load error", e);
+    this.loaded = false;
+
+    alert(
+      "Data gagal dimuat dari Google Sheets. " +
+      "Periksa koneksi dan deployment Apps Script. " +
+      "Aplikasi tidak akan menyimpan data otomatis agar data lama tidak tertimpa."
+    );
+  }
+},
   async persist(){
     try{
       await localSet(this.state);
