@@ -423,6 +423,7 @@ const LOCAL_APP_DATA_KEY = "wisma46_surat_app_data_v1";
 
 
 const GOOGLE_SHEETS_API = "https://script.google.com/macros/s/AKfycbwDMurV1CnRpl_-R7lt312kgfsAFQteJ_-bLYMPYywqv5oaHiZS0UD-7KoCxgIJg7pv/exec";
+const QR_SHEETS_API = "https://script.google.com/macros/s/AKfycbz8XjeU1WoHG6BTWreYiceoP1J24nKjfQ9xtbbuWPJchRHzB1ydF6siJ4GSlpOmXjWylw/exec";
 
 async function localGet(){
   try {
@@ -737,7 +738,7 @@ const App = {
       if (frame) {
         try {
           const bytes = Uint8Array.from(atob(QR_APP_HTML_B64), c => c.charCodeAt(0));
-          frame.srcdoc = new TextDecoder("utf-8").decode(bytes);
+          frame.srcdoc = App.patchQRAppForSheets(new TextDecoder("utf-8").decode(bytes));
         } catch (e) { frame.srcdoc = "<p style='font-family:sans-serif;padding:20px'>Modul QR Scanner gagal dimuat. Muat ulang halaman dan periksa konsol browser.</p>"; }
       }
     }
@@ -759,7 +760,7 @@ const App = {
         <div class="brand-sub">Building Management · Tenant Relation</div>
       </div>
       <div class="nav-group">
-        ${items.map(([v,ic,label])=>`<button class="nav-item ${this.view===v?'active':''}" onclick="if('${v}'==='qrscanner'){window.open('https://script.google.com/macros/s/AKfycbz8XjeU1WoHG6BTWreYiceoP1J24nKjfQ9xtbbuWPJchRHzB1ydF6siJ4GSlpOmXjWylw/exec','_blank')}else{App.navigate('${v}')}"><span class="nav-ico">${ic}</span>${label}</button>`).join("")}
+        ${items.map(([v,ic,label])=>`<button class="nav-item ${this.view===v?'active':''}" onclick="App.navigate('${v}')"><span class="nav-ico">${ic}</span>${label}</button>`).join("")}
       </div>
       <div class="sidebar-foot">Wisma 46 – Kota BNI<br>Tenant Relation · (021) 574 4408</div>
     </div>`;
@@ -2164,6 +2165,80 @@ ${esc(d.ttdJabatan)}\\par
     };
     reader.onerror = ()=> this.toast("⚠ Gagal membaca file dari komputer Anda.");
     reader.readAsText(file);
+  },
+
+    patchQRAppForSheets(html){
+    const startMarker = `const QR_LOCAL_PREFIX = 'wisma46_qr_';`;
+    const start = html.indexOf(startMarker);
+    if(start === -1) return html;
+
+    const endMarker = `    removeItem(key) {
+        delete qrMemory[key];
+        try { localStorage.removeItem(QR_LOCAL_PREFIX + key); } catch (err) {}
+    }
+};`;
+    const end = html.indexOf(endMarker, start);
+    if(end === -1) return html;
+
+    const replacement = `
+const QR_SHEETS_API = ${JSON.stringify(QR_SHEETS_API)};
+let qrMemory = {};
+let qrSaveQueue = Promise.resolve();
+
+async function qrLoadFromServer() {
+    try {
+        const res = await fetch(QR_SHEETS_API + "?action=get", { cache: "no-store" });
+        const result = await res.json();
+        if (result.status === "ok" && result.state) {
+            const s = result.state;
+            if (s.master)        qrMemory.wisma46_master = JSON.stringify(s.master);
+            if (s.samples)       qrMemory.wisma46_samples = JSON.stringify(s.samples);
+            if (s.sampleHistory) qrMemory.wisma46_sampleHistory = JSON.stringify(s.sampleHistory);
+            if (s.inspections)   qrMemory.wisma46_inspections = JSON.stringify(s.inspections);
+            if (s.currentWeek)   qrMemory.wisma46_currentWeek = s.currentWeek;
+            if (s.currentUser)   qrMemory.wisma46_currentUser = JSON.stringify(s.currentUser);
+        }
+    } catch (err) {
+        console.error("[QR] load error:", err);
+    }
+}
+function qrLoadLocalMemory() { qrLoadFromServer(); }
+
+function qrCollectState() {
+    return {
+        master:        JSON.parse(qrMemory.wisma46_master        || 'null') || DEFAULT_MASTER_DATA,
+        samples:       JSON.parse(qrMemory.wisma46_samples       || 'null') || [],
+        sampleHistory: JSON.parse(qrMemory.wisma46_sampleHistory || 'null') || [],
+        inspections:   JSON.parse(qrMemory.wisma46_inspections   || 'null') || [],
+        currentWeek:   qrMemory.wisma46_currentWeek || getCalendarWeekLabel(),
+        currentUser:   JSON.parse(qrMemory.wisma46_currentUser   || 'null') || { name: "", role: "Pemeriksa" }
+    };
+}
+
+function qrSyncToServer() {
+    qrSaveQueue = qrSaveQueue.then(async () => {
+        try {
+            await fetch(QR_SHEETS_API, {
+                method: "POST",
+                body: JSON.stringify({ action: "save", state: qrCollectState() })
+            });
+        } catch (err) { console.error("[QR] save error:", err); }
+    });
+    return qrSaveQueue;
+}
+
+const qrStorage = {
+    getItem(key) { return Object.prototype.hasOwnProperty.call(qrMemory, key) ? qrMemory[key] : null; },
+    setItem(key, value) { qrMemory[key] = String(value); qrSyncToServer(); },
+    removeItem(key) { delete qrMemory[key]; qrSyncToServer(); }
+};`;
+
+    html = html.slice(0, start) + replacement + html.slice(end + endMarker.length);
+    html = html.replace(
+      /window\.onload\s*=\s*async\s*function\s*\(\)\s*\{\s*\n?\s*qrLoadLocalMemory\(\);/,
+      "window.onload = async function() {\n            await qrLoadFromServer();"
+    );
+    return html;
   },
 
   afterRenderHooks(){}
