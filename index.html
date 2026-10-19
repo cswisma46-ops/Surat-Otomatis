@@ -732,6 +732,7 @@ const App = {
     const app=document.getElementById("app");
     app.innerHTML = this.sidebarHTML() + `<div class="main">${this.mainHTML()}</div>`;
     this.afterRenderHooks();
+     
 if (this.view === "qrscanner") {
     const frame = document.getElementById("qr-scanner-frame");
     if (frame) {
@@ -744,11 +745,7 @@ if (this.view === "qrscanner") {
         }
     }
 }
-          frame.srcdoc = new TextDecoder("utf-8").decode(bytes);
-        } catch (e) { frame.srcdoc = "<p style='font-family:sans-serif;padding:20px'>Modul QR Scanner gagal dimuat. Muat ulang halaman dan periksa konsol browser.</p>"; }
-      }
-    }
-  },
+     
   sidebarHTML(){
     const items = [
       ["dashboard","🏠","Dashboard"],
