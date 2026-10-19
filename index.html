@@ -728,18 +728,14 @@ const App = {
 
   /* ============================== RENDER ============================== */
   render(){
-    if(!this.loaded) return;
-    const app=document.getElementById("app");
-    app.innerHTML = this.sidebarHTML() + `<div class="main">${this.mainHTML()}</div>`;
-    this.afterRenderHooks();
     if (this.view === "qrscanner") {
-      const frame = document.getElementById("qr-scanner-frame");
-      if (frame) {
-        try {
-          const bytes = Uint8Array.from(atob(QR_APP_HTML_B64), c => c.charCodeAt(0));
-          frame.srcdoc = new TextDecoder("utf-8").decode(bytes);
-        } catch (e) { frame.srcdoc = "<p style='font-family:sans-serif;padding:20px'>Modul QR Scanner gagal dimuat. Muat ulang halaman dan periksa konsol browser.</p>"; }
-      }
+      window.open(
+        "https://script.google.com/macros/s/AKfycbz8XjeU1WoHG6BTWreYiceoP1J24nKjfQ9xtbbuWPJchRHzB1ydF6siJ4GSlpOmXjWylw/exec",
+        "_blank"
+      );
+      this.view = "dashboard";
+      app.innerHTML = this.sidebarHTML() + `<div class="main">${this.mainHTML()}</div>`;
+      this.afterRenderHooks();
     }
   },
   sidebarHTML(){
