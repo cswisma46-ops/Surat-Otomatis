@@ -732,19 +732,21 @@ const App = {
     const app=document.getElementById("app");
     app.innerHTML = this.sidebarHTML() + `<div class="main">${this.mainHTML()}</div>`;
     this.afterRenderHooks();
-    if (this.view === "qrscanner") {
-       
-const frame = document.getElementById("qr-scanner-frame");
-if (frame) {
-    try {
-        const bytes = Uint8Array.from(atob(QR_APP_HTML_B64), c => c.charCodeAt(0));
-        frame.srcdoc = new TextDecoder("utf-8").decode(bytes);
-    } catch (e) {
-        frame.srcdoc = "<p style='font-family:sans-serif;padding:20px'>Modul QR Scanner gagal dimuat. Muat ulang halaman dan periksa konsol browser.</p>";
+if (this.view === "qrscanner") {
+    const frame = document.getElementById("qr-scanner-frame");
+    if (frame) {
+        try {
+            const bytes = Uint8Array.from(
+                atob(QR_APP_HTML_B64),
+                c => c.charCodeAt(0)
+            );
+            frame.srcdoc = new TextDecoder("utf-8").decode(bytes);
+        } catch (e) {
+            console.error("QR Scanner gagal dimuat:", e);
+            frame.srcdoc = "<p style='font-family:sans-serif;padding:20px'>Modul QR Scanner gagal dimuat. Periksa konsol browser.</p>";
+        }
     }
 }
-       
-          const bytes = Uint8Array.from(atob(QR_APP_HTML_B64), c => c.charCodeAt(0));
           frame.srcdoc = new TextDecoder("utf-8").decode(bytes);
         } catch (e) { frame.srcdoc = "<p style='font-family:sans-serif;padding:20px'>Modul QR Scanner gagal dimuat. Muat ulang halaman dan periksa konsol browser.</p>"; }
       }
