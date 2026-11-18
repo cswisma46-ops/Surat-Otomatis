@@ -1106,10 +1106,14 @@ const App = {
       const { jsPDF } = window.jspdf;
       const oldShadow=paper.style.boxShadow;
       paper.style.boxShadow="none";
-      const canvas=await window.html2canvas(paper,{scale:2,useCORS:true,allowTaint:false,backgroundColor:"#ffffff",logging:false});
+      /* Resolusi tinggi: target ~4x (±380 dpi), dibatasi agar total piksel aman di HP (~16 juta piksel) */
+      const pr=paper.getBoundingClientRect();
+      const hiScale=Math.max(2,Math.min(4,Math.sqrt(16000000/Math.max(1,pr.width*pr.height))));
+      const canvas=await window.html2canvas(paper,{scale:hiScale,useCORS:true,allowTaint:false,backgroundColor:"#ffffff",logging:false});
       paper.style.boxShadow=oldShadow;
-      const doc=new jsPDF({unit:"mm",format:"a4",orientation:"portrait"});
-      doc.addImage(canvas.toDataURL("image/jpeg",0.96),"JPEG",0,0,210,297,undefined,"FAST");
+      const doc=new jsPDF({unit:"mm",format:"a4",orientation:"portrait",compress:true});
+      /* PNG (lossless) agar tepi huruf, header & footer tetap tajam saat di-zoom */
+      doc.addImage(canvas.toDataURL("image/png"),"PNG",0,0,210,297,undefined,"FAST");
       const pdfBlob=doc.output("blob");
       this.offerDownload(pdfBlob,`Surat_${this.draft.nomorSurat.replace(/\//g,"-")}.pdf`,"PDF");
       this.toast("PDF siap diunduh (1 halaman)");
