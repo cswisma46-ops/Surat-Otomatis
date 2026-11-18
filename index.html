@@ -348,26 +348,80 @@ function nl2br(s){ return esc(s).replace(/\n/g,"<br>"); }
 
 /* ---------------------------- Default seed data ---------------------------- */
 const DEFAULT_APRESIASI = "Kami menyampaikan apresiasi atas kerja sama yang telah terjalin dengan baik antara Bapak/Ibu dan Gedung Wisma 46. Kami berharap hubungan kerja sama ini dapat terus berjalan dengan baik di masa mendatang.";
-function defaultTemplates(){
-  const base = (label, subject, main, closing) => ({
-    id: uid("tmpl"), jenis: label, subjectDefault: subject,
+const DEFAULT_CLOSING_BASE = "Kami mohon maaf atas ketidaknyamanan yang ditimbulkan sehubungan dengan pekerjaan tersebut.\n\nApabila Bapak/Ibu memiliki pertanyaan, dapat menghubungi Tenant Relation kami di nomor telepon (021) 574 4408.\n\nAtas perhatian dan kerja sama yang baik, kami ucapkan terima kasih.";
+/* Isi bawaan tiap jenis template. Field opsional (alasan, dampak, durasi, waktu) langsung terisi saat template dipilih di Buat Surat. */
+const TEMPLATE_PRESETS = [
+  {jenis:"Pemadaman Listrik", subject:"Pemberitahuan Pemadaman Listrik",
+   main:"pekerjaan penyambungan / perbaikan jaringan kelistrikan",
+   alasan:"menjaga keandalan dan keamanan sistem kelistrikan gedung",
+   dampak:"pemadaman aliran listrik sementara", durasiAngka:2, durasiSatuan:"jam", waktuMulai:"20:00", waktuSelesai:"22:00",
+   closingExtra:"Mohon Bapak/Ibu dapat menyimpan data pekerjaan dan mematikan peralatan elektronik sebelum pekerjaan dimulai untuk menghindari kerusakan perangkat."},
+  {jenis:"Pekerjaan Maintenance", subject:"Pemberitahuan Pekerjaan Maintenance",
+   main:"pekerjaan pemeliharaan rutin gedung",
+   alasan:"menjaga kondisi dan kenyamanan gedung",
+   dampak:"gangguan sementara berupa kebisingan dan keterbatasan akses di area pekerjaan", durasiAngka:3, durasiSatuan:"jam", waktuMulai:"09:00", waktuSelesai:"12:00",
+   closingExtra:""},
+  {jenis:"Pekerjaan Engineering", subject:"Pemberitahuan Pekerjaan Engineering",
+   main:"pekerjaan engineering pada sistem gedung",
+   alasan:"memastikan sistem gedung berfungsi dengan optimal",
+   dampak:"gangguan sementara pada sistem yang sedang dikerjakan", durasiAngka:3, durasiSatuan:"jam", waktuMulai:"09:00", waktuSelesai:"12:00",
+   closingExtra:""},
+  {jenis:"Gangguan Air", subject:"Pemberitahuan Gangguan Air",
+   main:"perbaikan jaringan pipa air bersih",
+   alasan:"menjaga kelancaran dan kualitas pasokan air bersih",
+   dampak:"gangguan dan penghentian sementara pasokan air bersih", durasiAngka:3, durasiSatuan:"jam", waktuMulai:"09:00", waktuSelesai:"12:00",
+   closingExtra:"Mohon Bapak/Ibu dapat menampung kebutuhan air secukupnya sebelum pekerjaan dimulai."},
+  {jenis:"Pekerjaan Lift", subject:"Pemberitahuan Pekerjaan Lift",
+   main:"pemeliharaan / perbaikan unit lift",
+   alasan:"menjamin keselamatan dan keandalan operasional lift",
+   dampak:"unit lift tidak dapat dioperasikan sementara", durasiAngka:4, durasiSatuan:"jam", waktuMulai:"09:00", waktuSelesai:"13:00",
+   closingExtra:"Mohon Bapak/Ibu dapat menggunakan unit lift lain yang tersedia selama pekerjaan berlangsung."},
+  {jenis:"Pekerjaan HVAC / FCU / VRV", subject:"Pemberitahuan Pekerjaan HVAC",
+   main:"pemeliharaan sistem HVAC / FCU / VRV",
+   alasan:"menjaga performa dan kenyamanan sistem pendingin udara",
+   dampak:"penghentian sementara sistem pendingin udara", durasiAngka:3, durasiSatuan:"jam", waktuMulai:"09:00", waktuSelesai:"12:00",
+   closingExtra:""},
+  {jenis:"Pest Control", subject:"Pemberitahuan Pest Control",
+   main:"kegiatan pest control rutin",
+   alasan:"menjaga kebersihan dan kesehatan lingkungan gedung",
+   dampak:"aroma penyemprotan dan pembatasan akses sementara di area yang ditangani", durasiAngka:3, durasiSatuan:"jam", waktuMulai:"19:00", waktuSelesai:"22:00",
+   closingExtra:"Mohon Bapak/Ibu dapat mengamankan makanan, minuman, dan dokumen penting sebelum kegiatan dimulai."},
+  {jenis:"Pekerjaan Gedung Lainnya", subject:"Pemberitahuan Pekerjaan Gedung",
+   main:"pekerjaan pemeliharaan gedung",
+   alasan:"menjaga kondisi dan kenyamanan gedung",
+   dampak:"gangguan sementara pada operasional gedung", durasiAngka:3, durasiSatuan:"jam", waktuMulai:"09:00", waktuSelesai:"12:00",
+   closingExtra:""},
+  {jenis:"Custom", subject:"Pemberitahuan",
+   main:"pekerjaan yang akan dilaksanakan",
+   alasan:"", dampak:"gangguan sementara pada operasional gedung", durasiAngka:1, durasiSatuan:"jam", waktuMulai:"09:00", waktuSelesai:"10:00",
+   closingExtra:""},
+];
+function presetToTemplate(pr){
+  return {
+    id: uid("tmpl"), jenis: pr.jenis, subjectDefault: pr.subject,
     appreciationParagraph: DEFAULT_APRESIASI,
-    mainParagraphHint: main,
-    closingParagraph: closing || "Kami mohon maaf atas ketidaknyamanan yang ditimbulkan sehubungan dengan pekerjaan tersebut.\n\nApabila Bapak/Ibu memiliki pertanyaan, dapat menghubungi Tenant Relation kami di nomor telepon (021) 574 4408.\n\nAtas perhatian dan kerja sama yang baik, kami ucapkan terima kasih.",
+    mainParagraphHint: pr.main,
+    alasanDefault: pr.alasan, dampakDefault: pr.dampak,
+    durasiAngka: pr.durasiAngka, durasiSatuan: pr.durasiSatuan,
+    waktuMulai: pr.waktuMulai, waktuSelesai: pr.waktuSelesai,
+    closingParagraph: (pr.closingExtra? pr.closingExtra+"\n\n" : "") + DEFAULT_CLOSING_BASE,
     contactPerson: "Tenant Relation — (021) 574 4408",
     signatoryName: "Enuh Suharsilo", signatoryTitle: "Deputy Building Manager",
+  };
+}
+function defaultTemplates(){ return TEMPLATE_PRESETS.map(presetToTemplate); }
+/* Template lama yang tersimpan di database: lengkapi field baru tanpa menimpa teks yang sudah diubah pengguna. */
+function upgradeTemplates(list){
+  list.forEach(t=>{
+    const pr = TEMPLATE_PRESETS.find(x=>x.jenis===t.jenis);
+    if(t.alasanDefault===undefined) t.alasanDefault = pr? pr.alasan : "";
+    if(t.dampakDefault===undefined) t.dampakDefault = pr? pr.dampak : "";
+    if(t.durasiAngka===undefined) t.durasiAngka = pr? pr.durasiAngka : "";
+    if(t.durasiSatuan===undefined) t.durasiSatuan = pr? pr.durasiSatuan : "jam";
+    if(t.waktuMulai===undefined) t.waktuMulai = pr? pr.waktuMulai : "";
+    if(t.waktuSelesai===undefined) t.waktuSelesai = pr? pr.waktuSelesai : "";
   });
-  return [
-    base("Pemadaman Listrik","Pemberitahuan Pemadaman Listrik","pekerjaan penyambungan / perbaikan jaringan kelistrikan"),
-    base("Pekerjaan Maintenance","Pemberitahuan Pekerjaan Maintenance","pekerjaan pemeliharaan rutin gedung"),
-    base("Pekerjaan Engineering","Pemberitahuan Pekerjaan Engineering","pekerjaan engineering pada sistem gedung"),
-    base("Gangguan Air","Pemberitahuan Gangguan Air","perbaikan jaringan pipa air bersih"),
-    base("Pekerjaan Lift","Pemberitahuan Pekerjaan Lift","pemeliharaan / perbaikan unit lift"),
-    base("Pekerjaan HVAC / FCU / VRV","Pemberitahuan Pekerjaan HVAC","pemeliharaan sistem HVAC / FCU / VRV"),
-    base("Pest Control","Pemberitahuan Pest Control","kegiatan pest control rutin"),
-    base("Pekerjaan Gedung Lainnya","Pemberitahuan Pekerjaan Gedung","pekerjaan pemeliharaan gedung"),
-    base("Custom","Pemberitahuan","pekerjaan yang akan dilaksanakan"),
-  ];
+  return list;
 }
 function defaultTenants(){
   return [
@@ -512,6 +566,7 @@ const App = {
     if (!Array.isArray(this.state.templates)) {
       this.state.templates = defaultTemplates();
     }
+    upgradeTemplates(this.state.templates);
     if (!Array.isArray(this.state.tenants)) {
       this.state.tenants = defaultTenants();
     }
@@ -611,6 +666,7 @@ const App = {
       status: "Draft", dibuatOleh: this.state.settings.dibuatOleh, createdAt: new Date().toISOString(),
     };
     this.draft = Object.assign(d, prefill||{});
+    if(!(prefill && prefill.templateId) && this.state.templates[0]) this.applyTemplateToDraft(this.state.templates[0]);
     this.draft.hari = fmtHari(this.draft.tanggalPekerjaan);
     if(!this.draft.fontSize || Number(this.draft.fontSize)<9 || Number(this.draft.fontSize)>12) this.draft.fontSize=11;
     this.wizardStep = 1;
@@ -637,7 +693,9 @@ const App = {
     const areaTeks = d.areaTerdampak ? " di "+d.areaTerdampak : "";
     const deskripsi = desc || "pekerjaan yang akan dilaksanakan";
     const dampak = d.dampak || "gangguan sementara pada operasional gedung";
-    return "Sehubungan dengan adanya "+deskripsi+areaTeks+", bersama ini kami informasikan bahwa akan terjadi "+dampak+" selama kurang lebih "+durasiTeks+", yang akan dilaksanakan dengan rincian sebagai berikut:";
+    const alasan = (d.alasanPekerjaan||"").trim();
+    const alasanTeks = alasan ? " guna "+alasan.replace(/^(guna|untuk|dalam rangka)\s+/i,"") : "";
+    return "Sehubungan dengan adanya "+deskripsi+areaTeks+alasanTeks+", bersama ini kami informasikan bahwa akan terjadi "+dampak+" selama kurang lebih "+durasiTeks+", yang akan dilaksanakan dengan rincian sebagai berikut:";
   },
 
   applyTenantMode(mode){
@@ -840,7 +898,7 @@ const App = {
         `<div class="empty-state"><div class="e-ico">📭</div>Belum ada surat. Klik <b>Buat Surat Baru</b> untuk memulai.</div>`}
       </div>`;
   },
-  jenisLabel(jenisId){ const t=this.templateByJenis(jenisId); return t? t.jenis : jenisId; },
+  jenisLabel(jenisId){ const j=JENIS_LIST.find(x=>x.id===jenisId); if(j) return j.label; const t=this.templateByJenis(jenisId); return t? t.jenis : jenisId; },
   statusBadge(s){
     const cls = s==="Draft"?"badge-draft": s==="Terkirim"?"badge-terkirim":"badge-selesai";
     return `<span class="badge ${cls}">${esc(s)}</span>`;
@@ -885,29 +943,60 @@ const App = {
 
   stepTemplate(){
     const d=this.draft;
+    const cur=this.state.templates.find(t=>t.id===d.templateId);
+    const clip=(x,n)=>{ x=String(x||""); return x.length>n? x.slice(0,n-1)+"…" : x; };
     return `<div class="card card-pad">
       <div class="section-title">Step 1 — Pilih Template / Jenis Pemberitahuan</div>
-      <div class="row" style="grid-template-columns:repeat(3,1fr); gap:10px;">
+      <div class="help-box" style="margin-bottom:12px;">Memilih template otomatis mengisi <b>Hal</b>, deskripsi, alasan, dampak, durasi, waktu, paragraf apresiasi, penutup, dan penandatangan. Semua isian tetap bisa diubah di langkah berikutnya.</div>
+      <div class="row" style="grid-template-columns:repeat(2,1fr); gap:10px;">
         ${this.state.templates.map(t=>`
-          <button class="btn ${d.templateId===t.id?'btn-primary':''}" style="justify-content:flex-start; text-align:left; padding:12px 14px; height:auto;"
-            onclick="App.pickTemplate('${t.id}')">${esc(t.jenis)}</button>
+          <button class="btn ${d.templateId===t.id?'btn-primary':''}" style="justify-content:flex-start; text-align:left; padding:12px 14px; height:auto; flex-direction:column; align-items:flex-start; gap:3px; white-space:normal;"
+            onclick="App.pickTemplate('${t.id}')">
+            <span style="font-weight:700;">${d.templateId===t.id?'✓ ':''}${esc(t.jenis)}</span>
+            <span style="font-size:11.5px; font-weight:400; opacity:.85;">Hal: ${esc(t.subjectDefault)}</span>
+            <span style="font-size:11.5px; font-weight:400; opacity:.75;">${esc(clip(t.mainParagraphHint,70))}</span>
+          </button>
         `).join("")}
       </div>
+      ${cur? `<div class="help-box" style="margin-top:12px;"><b>Template terpilih:</b> ${esc(cur.jenis)}${cur.durasiAngka? ' · durasi '+esc(cur.durasiAngka)+' '+esc(cur.durasiSatuan):''}${cur.waktuMulai&&cur.waktuSelesai? ' · pukul '+esc(cur.waktuMulai)+'–'+esc(cur.waktuSelesai):''}</div>` : ""}
+      <div style="margin-top:8px; font-size:12.5px;"><button class="link-btn" onclick="App.navigate('template')">⚙ Kelola / ubah template</button></div>
       ${this.wizardNav(null,"Lanjut → Data Surat", null, "App.wizardStep=2; App.render()")}
     </div>`;
   },
+  /* Terapkan isi template ke draft (tanpa render) */
+  applyTemplateToDraft(t){
+    const d=this.draft;
+    const jenisMatch = JENIS_LIST.find(j=>j.label===t.jenis);
+    d.templateId = t.id;
+    d.jenis = jenisMatch? jenisMatch.id : t.jenis;
+    d.hal = t.subjectDefault || d.hal;
+    d.deskripsiPekerjaan = t.mainParagraphHint || "";
+    d.alasanPekerjaan = t.alasanDefault || "";
+    d.dampak = t.dampakDefault || "";
+    if(t.durasiAngka){ d.durasiAngka = t.durasiAngka; d.durasiSatuan = t.durasiSatuan || d.durasiSatuan; }
+    if(t.waktuMulai) d.waktuMulai = t.waktuMulai;
+    if(t.waktuSelesai) d.waktuSelesai = t.waktuSelesai;
+    d.apresiasi = t.appreciationParagraph || DEFAULT_APRESIASI;
+    d.penutup = t.closingParagraph || "";
+    d.ttdNama = t.signatoryName || d.ttdNama;
+    d.ttdJabatan = t.signatoryTitle || d.ttdJabatan;
+    d.kalimatPembuka = ""; // disusun ulang otomatis dari isi template
+  },
   pickTemplate(tid){
     const t=this.state.templates.find(x=>x.id===tid);
-    const jenisMatch = JENIS_LIST.find(j=>j.label===t.jenis);
-    this.draft.templateId = tid;
-    this.draft.jenis = jenisMatch? jenisMatch.id : t.jenis;
-    this.draft.hal = t.subjectDefault;
-    this.draft.deskripsiPekerjaan = t.mainParagraphHint || "";
-    this.draft.apresiasi = t.appreciationParagraph || DEFAULT_APRESIASI;
-    this.draft.penutup = t.closingParagraph;
-    this.draft.ttdNama = t.signatoryName || this.draft.ttdNama;
-    this.draft.ttdJabatan = t.signatoryTitle || this.draft.ttdJabatan;
+    if(!t) return;
+    this.applyTemplateToDraft(t);
     this.render();
+  },
+  /* Dari halaman Template: mulai surat baru langsung memakai template ini */
+  useTemplate(tid){
+    this.newDraft();
+    this.view="buat";
+    this.pickTemplate(tid);
+    this.wizardStep=2;
+    this.render();
+    window.scrollTo(0,0);
+    this.toast("Template dipakai — lengkapi data surat");
   },
   stepDataSurat(){
     const d=this.draft;
@@ -972,6 +1061,7 @@ const App = {
       <div class="field"><label>Jenis Pemberitahuan</label>
         <select onchange="App.draft.jenis=this.value">
           ${JENIS_LIST.map(j=>`<option value="${j.id}" ${d.jenis===j.id?'selected':''}>${j.label}</option>`).join("")}
+          ${this.state.templates.filter(t=>!JENIS_LIST.some(j=>j.label===t.jenis)).map(t=>`<option value="${esc(t.jenis)}" ${d.jenis===t.jenis?'selected':''}>${esc(t.jenis)}</option>`).join("")}
         </select></div>
       <div class="field"><label>Deskripsi Pekerjaan</label><textarea placeholder="mis. penyambungan kabel trafo listrik" onchange="App.draft.deskripsiPekerjaan=this.value">${esc(d.deskripsiPekerjaan)}</textarea></div>
       <div class="field"><label>Alasan Pekerjaan</label><textarea onchange="App.draft.alasanPekerjaan=this.value">${esc(d.alasanPekerjaan)}</textarea></div>
@@ -1904,16 +1994,19 @@ ${esc(d.ttdJabatan)}\\par
           <div class="tmpl-card-head">
             <div><div class="tmpl-name">${esc(t.jenis)}</div><div class="tmpl-sub">Hal default: ${esc(t.subjectDefault)}</div></div>
             <div class="action-row">
+              <button class="btn btn-sm btn-primary" onclick="App.useTemplate('${t.id}')">Pakai di Buat Surat →</button>
               <button class="btn btn-sm" onclick="App.openTemplateModal('${t.id}')">Edit</button>
+              <button class="btn btn-sm" onclick="App.duplicateTemplate('${t.id}')">Duplikat</button>
               <button class="btn btn-sm btn-danger" onclick="App.deleteTemplate('${t.id}')">Hapus</button>
             </div>
           </div>
+          <div style="font-size:12.5px; color:var(--ink-soft);">Pekerjaan: ${esc(t.mainParagraphHint||"-")}${t.durasiAngka? ' · '+esc(t.durasiAngka)+' '+esc(t.durasiSatuan):''}${t.waktuMulai&&t.waktuSelesai? ' · '+esc(t.waktuMulai)+'–'+esc(t.waktuSelesai):''}</div>
           <div style="font-size:12.5px; color:var(--ink-soft);">Penandatangan: ${esc(t.signatoryName)} — ${esc(t.signatoryTitle)}</div>
         </div>`).join("")}
     `;
   },
   openTemplateModal(id){
-    const t = id? this.state.templates.find(x=>x.id===id) : {id:null, jenis:"", subjectDefault:"", appreciationParagraph:DEFAULT_APRESIASI, mainParagraphHint:"", closingParagraph:"", contactPerson:"", signatoryName:this.state.settings.signatoryName, signatoryTitle:this.state.settings.signatoryTitle};
+    const t = id? this.state.templates.find(x=>x.id===id) : {id:null, jenis:"", subjectDefault:"", appreciationParagraph:DEFAULT_APRESIASI, mainParagraphHint:"", alasanDefault:"", dampakDefault:"", durasiAngka:1, durasiSatuan:"jam", waktuMulai:"09:00", waktuSelesai:"10:00", closingParagraph:DEFAULT_CLOSING_BASE, contactPerson:"", signatoryName:this.state.settings.signatoryName, signatoryTitle:this.state.settings.signatoryTitle};
     document.getElementById("modal-root").innerHTML = `
       <div class="modal-overlay" onclick="if(event.target===this) App.closeModal()">
         <div class="modal">
@@ -1923,6 +2016,14 @@ ${esc(d.ttdJabatan)}\\par
             <div class="field"><label>Subject / Hal Default</label><input id="tf-subject" type="text" value="${esc(t.subjectDefault)}"></div>
             <div class="field"><label>Paragraf Apresiasi (setelah "Dengan hormat,")</label><textarea id="tf-apresiasi" style="min-height:80px;">${esc(t.appreciationParagraph)}</textarea></div>
             <div class="field"><label>Deskripsi Pekerjaan Default (Main Paragraph)</label><textarea id="tf-main">${esc(t.mainParagraphHint)}</textarea></div>
+            <div class="field"><label>Alasan Pekerjaan Default</label><input id="tf-alasan" type="text" placeholder="mis. menjaga keandalan sistem kelistrikan gedung" value="${esc(t.alasanDefault||"")}"></div>
+            <div class="field"><label>Dampak terhadap Tenant Default</label><input id="tf-dampak" type="text" placeholder="mis. pemadaman aliran listrik sementara" value="${esc(t.dampakDefault||"")}"></div>
+            <div class="row row-4">
+              <div class="field"><label>Durasi</label><input id="tf-durasi" type="number" min="1" value="${esc(t.durasiAngka||"")}"></div>
+              <div class="field"><label>Satuan</label><select id="tf-satuan">${DURASI_UNITS.map(u=>`<option ${t.durasiSatuan===u?'selected':''}>${u}</option>`).join("")}</select></div>
+              <div class="field"><label>Mulai</label><input id="tf-mulai" type="time" value="${esc(t.waktuMulai||"")}"></div>
+              <div class="field"><label>Selesai</label><input id="tf-selesai" type="time" value="${esc(t.waktuSelesai||"")}"></div>
+            </div>
             <div class="field"><label>Paragraf Penutup</label><textarea id="tf-closing" style="min-height:100px;">${esc(t.closingParagraph)}</textarea></div>
             <div class="row row-2">
               <div class="field"><label>Nama Penandatangan</label><input id="tf-signame" type="text" value="${esc(t.signatoryName)}"></div>
@@ -1938,8 +2039,12 @@ ${esc(d.ttdJabatan)}\\par
     const data = {
       jenis: val("tf-jenis"), subjectDefault: val("tf-subject"), appreciationParagraph: val("tf-apresiasi"),
       mainParagraphHint: val("tf-main"), closingParagraph: val("tf-closing"),
+      alasanDefault: val("tf-alasan"), dampakDefault: val("tf-dampak"),
+      durasiAngka: Number(val("tf-durasi"))||"", durasiSatuan: val("tf-satuan"),
+      waktuMulai: val("tf-mulai"), waktuSelesai: val("tf-selesai"),
       contactPerson:"", signatoryName: val("tf-signame"), signatoryTitle: val("tf-sigtitle"),
     };
+    if(!data.jenis.trim()){ this.toast("Nama jenis template wajib diisi"); return; }
     if(id){
       const idx=this.state.templates.findIndex(t=>t.id===id);
       this.state.templates[idx] = Object.assign(this.state.templates[idx], data);
@@ -1947,6 +2052,14 @@ ${esc(d.ttdJabatan)}\\par
       this.state.templates.push(Object.assign({id:uid("tmpl")}, data));
     }
     this.persist().then(()=>{ this.closeModal(); this.toast("Template disimpan"); this.render(); });
+  },
+  duplicateTemplate(id){
+    const src=this.state.templates.find(t=>t.id===id);
+    if(!src) return;
+    const copy=JSON.parse(JSON.stringify(src));
+    copy.id=uid("tmpl"); copy.jenis=src.jenis+" (Salinan)";
+    this.state.templates.push(copy);
+    this.persist().then(()=>{ this.toast("Template diduplikasi"); this.render(); });
   },
   deleteTemplate(id){
     this.confirmModal("Hapus template ini?","Surat yang sudah dibuat tidak akan terpengaruh.", ()=>{
